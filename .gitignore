@@ -1,2 +1,2 @@
-**/*.dat
-node_modules/
+*.dat
+!*/
