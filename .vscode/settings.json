@@ -1,0 +1,14 @@
+{
+    "C_Cpp.default.compilerPath": "/usr/bin/g++",
+    "files.associations": {
+        "string": "cpp",
+        "fstream": "cpp",
+        "sparse": "cpp",
+        "*.tcc": "cpp",
+        "deque": "cpp",
+        "list": "cpp",
+        "vector": "cpp",
+        "iosfwd": "cpp",
+        "stdexcept": "cpp"
+    }
+}

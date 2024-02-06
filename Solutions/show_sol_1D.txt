@@ -1,0 +1,16 @@
+# Définition des plages fixes pour les axes x et y
+set xrange [-1:1]  # Remplacez xmin et xmax par les valeurs appropriées
+set yrange [0:1]  # Remplacez ymin et ymax par les valeurs appropriées
+
+# Nombre total de fichiers
+n_files = 222
+
+pause 1 
+# Boucle sur les indices 
+do for [i=0:n_files-1] {
+    file_name = sprintf("valid_1D/valid_1D_%i.dat", i)
+    
+    set title "t = ".sprintf("%i", i)." s"
+    plot file_name u 1:2 w lp
+    pause 0.08
+}
