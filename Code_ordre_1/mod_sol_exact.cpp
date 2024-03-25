@@ -80,7 +80,7 @@ void Exact::Update(double t)
 {
     std::string name_file ;
     std::ofstream mon_flux ;
-    name_file = "/home/segal/Documents/MatMeca/TER-2A-bis/Solutions/exact_1D/exact_1D_" + std::to_string(_n) + ".dat";
+    name_file = "/home/segal/Documents/MatMeca/TER-SHALLOW-WATER-EQUATION/Solutions/exact_1D/exact_1D_" + std::to_string(_n) + ".dat";
     mon_flux.open(name_file);
 
     double x;    

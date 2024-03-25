@@ -137,7 +137,7 @@ void Schema::Update_U()
 void Schema::Save_Solution()
 {
     char buffer[100];
-    std::snprintf(buffer, sizeof(buffer), "/home/segal/Documents/MatMeca/TER-2A-bis/Solutions/valid_1D/valid_1D_%i.dat", _k);
+    std::snprintf(buffer, sizeof(buffer), "/home/segal/Documents/MatMeca/TER-SHALLOW-WATER-EQUATION/Solutions/valid_1D/valid_1D_%i.dat", _k);
     _k++;
 
     // Écriture du fichier
