@@ -80,11 +80,19 @@ class Schema
         // Update la valeur de b max
         void Update_B_max();
         // Update la valeur des flux
-        vector<pair<double,double>> Update_Flux(vector<pair<double,double>> U);
-        // Update la valeur de u
-        vector<pair<double,double>> Update_U(vector<pair<double,double>> U, vector<pair<double,double>> F);
+        void Compute_Flux(int j);
+        // Update la valeur des flux
+        void Compute_Flux_prime(int j);
+        // Update la valeur des flux
+        void Compute_U_prime(int j);
+        // Update la valeur des flux
+        void Compute_U_second(int j);
+        // Update la valeur des flux
+        void Compute_UO2(int j);
         // Update la valeur de uo2
-        vector<pair<double,double>> Update_UO2(vector<pair<double,double>> U, vector<pair<double,double>> U_second);
+        void Update_UO2();
+        // Update la valeur de u
+        void Update_U();
         // Applique la fonction F à la maille i
         pair<double,double> Fonction_F(pair<double,double> Ui);
         // Calcul le flux entre i et i+1

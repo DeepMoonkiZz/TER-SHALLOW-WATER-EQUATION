@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 
 using namespace std;
@@ -48,6 +49,8 @@ void Schema::Initialize_vector()
 
     _U_second.resize(_nx);
 
+    _UO2.resize(_nx);
+
     _Verification.resize(_nx, 1);
 
     for (int i=0; i < _nx; i++) {
@@ -68,62 +71,103 @@ void Schema::Update()
     _dt = (0.9*_dx)/(2.*_bmax);
     // Calcul du nouveau t
     _t += _dt;
-
-    // Calcul des flux
-    _Flux = this->Update_Flux(_U);
-
-    // Calcul de U prime
-    _U_prime = this->Update_U(_U, _Flux);
-
-    // Calcul des flux prime
-    _Flux_prime = this->Update_Flux(_U_prime);
-
-    // Calcul de U second
-    _U_second = this->Update_U(_U_prime, _Flux_prime);
-
-    // Calcul de U ordre 2
-    _UO2 = this->Update_UO2(_U, _U_second);
-    
-    // U prend la valeur de U ordre 2
-    _U = _UO2; 
+    // boucle de verification
+    while (!all_of(_Verification.begin(), _Verification.end(), [](int i) { return i == 0; })) {
+        this->Update_UO2();
+        this->Update_U();
+    }
+    _Verification.assign(_nx, 1);
 }
 
 
-void Schema::Update_B_max()
+void Schema::Update_U()
 {
-    double u, h;
-    _bmax = 0;
     for (int i=0; i < _nx; i++) {
-        h = _U[i].first;
-        u = _U[i].second/h;
-        if (abs(u+sqrt(h*_g)) > _bmax) {
-            _bmax = abs(u+sqrt(h*_g));
-        }
-        if (abs(u-sqrt(h*_g)) > _bmax) {
-            _bmax = abs(u-sqrt(h*_g));
+        if (_UO2[i].first>=0) {
+            _U[i].first = _UO2[i].first;
+            _U[i].second = _UO2[i].second;  
+            _Verification[i] = 0;
         }
     }
 }
 
 
-vector<pair<double,double>> Schema::Update_Flux(vector<pair<double,double>> U)
+void Schema::Update_UO2()
 {
-    vector<pair<double,double>> F(_nx+1);
+    for (int i=0; i<_nx; i++) {
+        if (_Verification[i]==1) {
+            for (int j=max(0, i-2); j<min(_nx, j+3); j++) {
+                this->Compute_Flux(j);
+                this->Compute_U_prime(j);
+                this->Compute_Flux_prime(j);
+                this->Compute_U_second(j);
+                this->Compute_UO2(j);
+            }
+        }
+    }
+}
+
+
+void Schema::Compute_UO2(int j)
+{
+    _UO2[j].first = _U[j].first + _U_second[j].first;
+    _UO2[j].second = _U[j].second + _U_second[j].second;
+}
+
+
+void Schema::Compute_U_prime(int j)
+{
+    for (int i=max(0, j-1); i<min(_nx, j+2); i++) {
+        _U_prime[j].first = _U[j].first - (_dt/_dx)*(_Flux[j+1].first - _Flux[j].first);
+        _U_prime[j].second = _U[j].second - (_dt/_dx)*(_Flux[j+1].second - _Flux[j].second);
+    }
+}
+
+
+void Schema::Compute_U_second(int j)
+{
+    _U_second[j].first = _U_prime[j].first - (_dt/_dx)*(_Flux_prime[j+1].first - _Flux_prime[j].first);
+    _U_second[j].second = _U_prime[j].second - (_dt/_dx)*(_Flux_prime[j+1].second - _Flux_prime[j].second);
+}
+
+
+void Schema::Compute_Flux(int j)
+{
     pair<double,double> U_droite, U_gauche; 
 
-    U_gauche.first = 2.*U[0].first - U[1].first, U_gauche.second = 2.*U[0].second - U[1].second;
-    U_droite.first = 2.*U[_nx-1].first - U[_nx-2].first, U_droite.second = 2.*U[_nx-1].second - U[_nx-2].second;
-
-    F[0] = this->Flux(U[0], U_gauche);
-    F[_nx] = this->Flux(U_droite, U[_nx-1]);
-
-    for (int i=0; i < _nx-1; i++) {
-        U_gauche.first = (U[i].first + U[i+1].first)/2., U_gauche.second = (U[i].second + U[i+1].second)/2.;
-        U_droite.first = (3.*U[i].first - U[i+1].first)/2., U_droite.second = (3.*U[i].second - U[i+1].second)/2.;
-        F[i+1] = this->Flux(U_gauche, U_droite);
+    if (j==0 || j==1) {
+        U_gauche.first = 2.*_U[0].first - _U[1].first, U_gauche.second = 2.*_U[0].second - _U[1].second;
+        _Flux[0] = this->Flux(_U[0], U_gauche);
     }
+    else if (j==_nx-1 || j==_nx-2) {
+        U_droite.first = 2.*_U[_nx-1].first - _U[_nx-2].first, U_droite.second = 2.*_U[_nx-1].second - _U[_nx-2].second;
+        _Flux[_nx] = this->Flux(U_droite, _U[_nx-1]);
+    }
+    for (int i=max(0, j-2); i<min(_nx-1, j+2); i++) {
+        U_gauche.first = (_U[i].first + _U[i+1].first)/2., U_gauche.second = (_U[i].second + _U[i+1].second)/2.;
+        U_droite.first = (3.*_U[i].first - _U[i+1].first)/2., U_droite.second = (3.*_U[i].second - _U[i+1].second)/2.;
+        _Flux[i+1] = this->Flux(U_gauche, U_droite);
+    }
+}
 
-    return F;
+
+void Schema::Compute_Flux_prime(int j)
+{
+    pair<double,double> U_droite, U_gauche; 
+
+    if (j==0) {
+        U_gauche.first = 2.*_U_prime[0].first - _U_prime[1].first, U_gauche.second = 2.*_U_prime[0].second - _U_prime[1].second;
+        _Flux_prime[0] = this->Flux(_U_prime[0], U_gauche);
+    }
+    else if (j==_nx-1) {
+        U_droite.first = 2.*_U_prime[_nx-1].first - _U_prime[_nx-2].first, U_droite.second = 2.*_U_prime[_nx-1].second - _U_prime[_nx-2].second;
+        _Flux_prime[_nx] = this->Flux(U_droite, _U_prime[_nx-1]);
+    }
+    for (int i=max(0, j-1); i<min(_nx-1, j+1); i++) {
+        U_gauche.first = (_U_prime[i].first + _U_prime[i+1].first)/2., U_gauche.second = (_U_prime[i].second + _U_prime[i+1].second)/2.;
+        U_droite.first = (3.*_U_prime[i].first - _U_prime[i+1].first)/2., U_droite.second = (3.*_U_prime[i].second - _U_prime[i+1].second)/2.;
+        _Flux_prime[i+1] = this->Flux(U_gauche, U_droite);
+    }
 }
 
 
@@ -152,29 +196,20 @@ pair<double,double> Schema::Fonction_F(pair<double,double> Ui)
 }
 
 
-vector<pair<double,double>> Schema::Update_U(vector<pair<double,double>> U, vector<pair<double,double>> F)
+void Schema::Update_B_max()
 {
-    vector<pair<double,double>> U_update(_nx);
-
+    double u, h;
+    _bmax = 0;
     for (int i=0; i < _nx; i++) {
-        U_update[i].first = U[i].first - (_dt/_dx)*(F[i+1].first - F[i].first);
-        U_update[i].second = U[i].second - (_dt/_dx)*(F[i+1].second - F[i].second);
+        h = _U[i].first;
+        u = _U[i].second/h;
+        if (abs(u+sqrt(h*_g)) > _bmax) {
+            _bmax = abs(u+sqrt(h*_g));
+        }
+        if (abs(u-sqrt(h*_g)) > _bmax) {
+            _bmax = abs(u-sqrt(h*_g));
+        }
     }
-
-    return U_update;
-}
-
-
-vector<pair<double,double>> Schema::Update_UO2(vector<pair<double,double>> U, vector<pair<double,double>> U_second)
-{
-    vector<pair<double,double>> UO2(_nx);
-
-    for (int i=0; i < _nx; i++) {
-        UO2[i].first = (U[i].first + U_second[i].first)/2.;
-        UO2[i].second = (U[i].second + U_second[i].second)/2.;
-    }
-
-    return UO2;
 }
 
 
