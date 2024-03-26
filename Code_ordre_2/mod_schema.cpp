@@ -48,7 +48,7 @@ void Schema::Initialize_vector()
 
     _U_second.resize(_nx);
 
-    _Verification.resize(_nx, 1);
+    _Verification_U.resize(_nx, 1);
 
     for (int i=0; i < _nx; i++) {
         if (_xmin + i*_dx <= _x_barrage) {
@@ -112,7 +112,7 @@ vector<pair<double,double>> Schema::Update_Flux(vector<pair<double,double>> U)
     pair<double,double> U_droite, U_gauche; 
 
     U_gauche.first = 2.*U[0].first - U[1].first, U_gauche.second = 2.*U[0].second - U[1].second;
-    U_droite.first = 2.*U[_nx-1].first - U[_nx-2].first, U_droite.second = 2.*U[_nx-1].second - U[_nx-2].second;
+    U_droite.first = 2.*U[_nx-2].first - U[_nx-1].first, U_droite.second = 2.*U[_nx-2].second - U[_nx-1].second;
 
     F[0] = this->Flux(U[0], U_gauche);
     F[_nx] = this->Flux(U_droite, U[_nx-1]);

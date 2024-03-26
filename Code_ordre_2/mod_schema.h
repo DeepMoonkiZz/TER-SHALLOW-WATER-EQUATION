@@ -59,8 +59,8 @@ class Schema
         vector<pair<double,double>> _Flux_prime;
         // Vecteur u ordre 2
         vector<pair<double,double>> _UO2;
-        // Vecteur vérification
-        vector<int> _Verification;
+        // Vecteur vérification de U
+        vector<int> _Verification_U;
         
 
     public:
