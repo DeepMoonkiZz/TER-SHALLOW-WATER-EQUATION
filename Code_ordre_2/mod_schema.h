@@ -87,6 +87,8 @@ class Schema
         void Update_B_max();
         // Update la valeur des flux
         vector<pair<double,double>> Update_Flux(vector<pair<double,double>> U, vector<int> Verification_Flux);
+        // Update la valeur des flux
+        vector<pair<double,double>> Update_Flux_O2(vector<pair<double,double>> U);
         // Update la valeur de u
         vector<pair<double,double>> Update_U(vector<pair<double,double>> U, vector<pair<double,double>> F, vector<int> Verification_U);
         // Update la valeur de uo2

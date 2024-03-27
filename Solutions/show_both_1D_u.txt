@@ -1,9 +1,9 @@
 # Définition des plages fixes pour les axes x et y
 set xrange [-1:1]  # Remplacez xmin et xmax par les valeurs appropriées
-set yrange [0:1]  # Remplacez ymin et ymax par les valeurs appropriées
+set yrange [0:1.5]  # Remplacez ymin et ymax par les valeurs appropriées
 
 # Nombre total de fichiers
-n_files = 300
+n_files = 514
 
 pause 1 
 # Boucle sur les indices 
@@ -13,5 +13,5 @@ do for [i=0:n_files-1] {
     
     set title "t = ".sprintf("%i", i)." s"
     plot file_valid u 1:2 w lp, file_exact u 1:2 w lp
-    pause 0.1
+    pause 0.03
 }
