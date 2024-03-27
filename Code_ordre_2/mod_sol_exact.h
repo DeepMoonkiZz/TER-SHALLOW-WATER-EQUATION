@@ -26,6 +26,8 @@ class Exact
         double _he, _ue;
         // 
         double _sigma;
+        // Vecteur U exact
+        vector<pair<double, double>> _U_exact;
         
 
     public:
@@ -44,4 +46,6 @@ class Exact
         double false_position(double a, double b, double tol, int max_iter);
         // Update a chaque iteration en temps
         void Update(double t);    
+        // recuperer U exact
+        vector<pair<double,double>> GetU() {return _U_exact;};
 };

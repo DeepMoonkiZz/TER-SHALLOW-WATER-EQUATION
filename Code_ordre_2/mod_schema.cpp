@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 
 using namespace std;
@@ -49,6 +50,9 @@ void Schema::Initialize_vector()
     _U_second.resize(_nx);
 
     _Verification_U.resize(_nx, 1);
+    _Verification_Flux.resize(_nx+1, 1);
+    _Verification_U_prime.resize(_nx, 1);
+    _Verification_Flux_prime.resize(_nx+1, 1);
 
     for (int i=0; i < _nx; i++) {
         if (_xmin + i*_dx <= _x_barrage) {
@@ -69,23 +73,27 @@ void Schema::Update()
     // Calcul du nouveau t
     _t += _dt;
 
-    // Calcul des flux
-    _Flux = this->Update_Flux(_U);
+    while (!all_of(_Verification_U.begin(), _Verification_U.end(), [](int i) { return i == 0; })) {
+        // Calcul des flux
+        _Flux = this->Update_Flux(_U, _Verification_Flux);
+        // Calcul de U prime
+        _U_prime = this->Update_U(_U, _Flux, _Verification_U_prime);
+        // Calcul des flux prime
+        _Flux_prime = this->Update_Flux(_U_prime, _Verification_Flux_prime);
+        // Calcul de U second
+        _U_second = this->Update_U(_U_prime, _Flux_prime, _Verification_U);
+        // Calcul de U ordre 2
+        _UO2 = this->Update_UO2(_U, _U_second, _Verification_U);
+        // Update les vecteurs vérification
+        this->Update_verification();
+    }
 
-    // Calcul de U prime
-    _U_prime = this->Update_U(_U, _Flux);
+    _U = _UO2;
 
-    // Calcul des flux prime
-    _Flux_prime = this->Update_Flux(_U_prime);
-
-    // Calcul de U second
-    _U_second = this->Update_U(_U_prime, _Flux_prime);
-
-    // Calcul de U ordre 2
-    _UO2 = this->Update_UO2(_U, _U_second);
-    
-    // U prend la valeur de U ordre 2
-    _U = _UO2; 
+    _Verification_U.assign(_nx, 1);
+    _Verification_Flux.assign(_nx, 1);
+    _Verification_U_prime.assign(_nx, 1);
+    _Verification_Flux_prime.assign(_nx, 1);
 }
 
 
@@ -106,21 +114,27 @@ void Schema::Update_B_max()
 }
 
 
-vector<pair<double,double>> Schema::Update_Flux(vector<pair<double,double>> U)
+vector<pair<double,double>> Schema::Update_Flux(vector<pair<double,double>> U, vector<int> Verification_Flux)
 {
     vector<pair<double,double>> F(_nx+1);
     pair<double,double> U_droite, U_gauche; 
 
-    U_gauche.first = 2.*U[0].first - U[1].first, U_gauche.second = 2.*U[0].second - U[1].second;
-    U_droite.first = 2.*U[_nx-2].first - U[_nx-1].first, U_droite.second = 2.*U[_nx-2].second - U[_nx-1].second;
-
-    F[0] = this->Flux(U[0], U_gauche);
-    F[_nx] = this->Flux(U_droite, U[_nx-1]);
-
-    for (int i=0; i < _nx-1; i++) {
-        U_gauche.first = (U[i].first + U[i+1].first)/2., U_gauche.second = (U[i].second + U[i+1].second)/2.;
-        U_droite.first = (3.*U[i].first - U[i+1].first)/2., U_droite.second = (3.*U[i].second - U[i+1].second)/2.;
-        F[i+1] = this->Flux(U_gauche, U_droite);
+    for (int i=0; i<_nx+1; i++) {
+        if (Verification_Flux[i]) {
+            if (i==0) {
+                U_gauche.first = 2.*U[0].first - U[1].first, U_gauche.second = 2.*U[0].second - U[1].second;
+                F[0] = this->Flux(U[0], U_gauche);
+            }
+            else if (i==_nx) {
+                U_droite.first = 2.*U[_nx-2].first - U[_nx-1].first, U_droite.second = 2.*U[_nx-2].second - U[_nx-1].second;
+                F[_nx] = this->Flux(U_droite, U[_nx-1]);
+            }
+            else {
+                U_gauche.first = (U[i-1].first + U[i].first)/2., U_gauche.second = (U[i-1].second + U[i].second)/2.;
+                U_droite.first = (3.*U[i-1].first - U[i].first)/2., U_droite.second = (3.*U[i-1].second - U[i].second)/2.;
+                F[i] = this->Flux(U_gauche, U_droite);
+            }
+        }
     }
 
     return F;
@@ -152,29 +166,59 @@ pair<double,double> Schema::Fonction_F(pair<double,double> Ui)
 }
 
 
-vector<pair<double,double>> Schema::Update_U(vector<pair<double,double>> U, vector<pair<double,double>> F)
+vector<pair<double,double>> Schema::Update_U(vector<pair<double,double>> U, vector<pair<double,double>> F, vector<int> Verification_U)
 {
     vector<pair<double,double>> U_update(_nx);
 
-    for (int i=0; i < _nx; i++) {
-        U_update[i].first = U[i].first - (_dt/_dx)*(F[i+1].first - F[i].first);
-        U_update[i].second = U[i].second - (_dt/_dx)*(F[i+1].second - F[i].second);
+    for (int i=0; i<_nx; i++) {
+        if (Verification_U[i]) {
+            U_update[i].first = U[i].first - (_dt/_dx)*(F[i+1].first - F[i].first);
+            U_update[i].second = U[i].second - (_dt/_dx)*(F[i+1].second - F[i].second);
+        }
     }
 
     return U_update;
 }
 
 
-vector<pair<double,double>> Schema::Update_UO2(vector<pair<double,double>> U, vector<pair<double,double>> U_second)
+vector<pair<double,double>> Schema::Update_UO2(vector<pair<double,double>> U, vector<pair<double,double>> U_second, vector<int> Verification_U)
 {
     vector<pair<double,double>> UO2(_nx);
 
-    for (int i=0; i < _nx; i++) {
-        UO2[i].first = (U[i].first + U_second[i].first)/2.;
-        UO2[i].second = (U[i].second + U_second[i].second)/2.;
+    for (int i=0; i<_nx; i++) {
+        if (Verification_U[i]) {
+            UO2[i].first = (U[i].first + U_second[i].first)/2.;
+            UO2[i].second = (U[i].second + U_second[i].second)/2.;
+        }
     }
 
     return UO2;
+}
+
+
+void Schema::Update_verification()
+{
+    _Verification_U.assign(_nx, 0);
+    _Verification_Flux.assign(_nx, 0);
+    _Verification_U_prime.assign(_nx, 0);
+    _Verification_Flux_prime.assign(_nx, 0);
+
+    for (int i=0; i<_nx; i++) {
+        if (_UO2[i].first<0) {
+            for (int j=max(0, i-2); j<min(_nx, i+2); j++) {
+                _Verification_U[j] = 1;
+                _Verification_Flux_prime[j] = 1;
+                _Verification_Flux_prime[j+1] = 1;
+                _Verification_U_prime[max(0, j-1)] = 1;
+                _Verification_U_prime[j] = 1;
+                _Verification_U_prime[min(_nx-1, j+1)] = 1;
+                _Verification_Flux[max(0, j-1)] = 1;
+                _Verification_Flux[j] = 1;
+                _Verification_Flux[j+1] = 1;
+                _Verification_Flux[min(_nx, j+2)] = 1;
+            }
+        }
+    }
 }
 
 

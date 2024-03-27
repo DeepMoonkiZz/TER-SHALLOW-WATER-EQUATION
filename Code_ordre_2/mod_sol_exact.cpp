@@ -2,6 +2,7 @@
 #include <cmath>
 #include <fstream>
 #include <string>
+#include <vector>
 
 #include "mod_sol_exact.h"
 
@@ -58,6 +59,8 @@ void Exact::Initialisation() {
     fichier >> _h_gauche;
     fichier >> _h_droite;
 
+    _U_exact.resize(nx);
+
 
     _g = 9.81;
     
@@ -93,20 +96,28 @@ void Exact::Update(double t)
         if (x<=_lambdag*t)
         {
             mon_flux << x <<  " " << _h_gauche << " " << 0 << std::endl;
+            _U_exact[int((x-_xmin)/_dx)].first = _h_gauche;
+            _U_exact[int((x-_xmin)/_dx)].second = 0;
         }
         else if (x>_lambdag*t && x<=_lambdae*t)
         {
             h = (1./(9*_g))*pow(2*sqrt(_g*_h_gauche)-(x/t),2);
             u = 2*(sqrt(_g*_h_gauche)-sqrt(_g*h));
             mon_flux << x <<  " " << h << " " << u << std::endl;
+            _U_exact[int((x-_xmin)/_dx)].first = h;
+            _U_exact[int((x-_xmin)/_dx)].second = u;
         }
         else if (x>_lambdae*t && x<=_sigma*t)
         {
             mon_flux << x <<  " " << _he << " " << _ue << std::endl;
+            _U_exact[int((x-_xmin)/_dx)].first = _he;
+            _U_exact[int((x-_xmin)/_dx)].second = _ue;
         }
         else if (x>_sigma*t)
         {
             mon_flux << x <<  " " << _h_droite << " " << 0 << std::endl;
+            _U_exact[int((x-_xmin)/_dx)].first = _h_droite;
+            _U_exact[int((x-_xmin)/_dx)].second = 0;
         }
         x += _dx;
     }

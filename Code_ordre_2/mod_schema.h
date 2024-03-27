@@ -61,6 +61,12 @@ class Schema
         vector<pair<double,double>> _UO2;
         // Vecteur vérification de U
         vector<int> _Verification_U;
+        // Vecteur vérification de U prime
+        vector<int> _Verification_U_prime;
+        // Vecteur vérification du flux
+        vector<int> _Verification_Flux;
+        // Vecteur vérification de flux prime
+        vector<int> _Verification_Flux_prime;
         
 
     public:
@@ -80,11 +86,13 @@ class Schema
         // Update la valeur de b max
         void Update_B_max();
         // Update la valeur des flux
-        vector<pair<double,double>> Update_Flux(vector<pair<double,double>> U);
+        vector<pair<double,double>> Update_Flux(vector<pair<double,double>> U, vector<int> Verification_Flux);
         // Update la valeur de u
-        vector<pair<double,double>> Update_U(vector<pair<double,double>> U, vector<pair<double,double>> F);
+        vector<pair<double,double>> Update_U(vector<pair<double,double>> U, vector<pair<double,double>> F, vector<int> Verification_U);
         // Update la valeur de uo2
-        vector<pair<double,double>> Update_UO2(vector<pair<double,double>> U, vector<pair<double,double>> U_second);
+        vector<pair<double,double>> Update_UO2(vector<pair<double,double>> U, vector<pair<double,double>> U_second, vector<int> Verification_U);
+        // Update la valeur des vecteur verificaiton
+        void Update_verification();
         // Applique la fonction F à la maille i
         pair<double,double> Fonction_F(pair<double,double> Ui);
         // Calcul le flux entre i et i+1
