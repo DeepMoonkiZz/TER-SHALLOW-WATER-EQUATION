@@ -87,6 +87,7 @@ void Schema::Update()
     _UO2 = this->Update_UO2(_U, _U_second, _Verification_U);
     // Update les vecteurs vérification
     this->Update_verification();
+
     // Boucle sur l'ordre 1 si critère limiteur non atteint
     while (!all_of(_Verification_U.begin(), _Verification_U.end(), [](int i) { return i == 0; })) {
         // Calcul des flux
@@ -105,10 +106,16 @@ void Schema::Update()
 
     _U = _UO2;
 
+        cout << "Verif U :";
+    for (int i=0; i<_nx; i++) {
+        cout << _U[i].first << " ";
+    }
+    cout << endl;
+
     _Verification_U.assign(_nx, 1);
-    _Verification_Flux.assign(_nx, 1);
+    _Verification_Flux.assign(_nx+1, 1);
     _Verification_U_prime.assign(_nx, 1);
-    _Verification_Flux_prime.assign(_nx, 1);
+    _Verification_Flux_prime.assign(_nx+1, 1);
 }
 
 
@@ -132,23 +139,29 @@ void Schema::Update_B_max()
 vector<pair<double,double>> Schema::Update_Flux_O2(vector<pair<double,double>> U)
 {
     vector<pair<double,double>> F(_nx+1, {0, 0});
-    pair<double,double> U_droite, U_gauche; 
+    pair<double,double> U_droite, U_gauche, Um, Up, Upp;
+
+    Um.first = (2.*U[0].first) - U[1].first, Um.second = (2.*U[0].second) - U[1].second;
+    Up.first = (2.*U[_nx-1].first) - U[_nx-2].first, Up.second = (2.*U[_nx-1].second) - U[_nx-2].second;
+    Upp.first = (3.*U[_nx-1].first) - (2.*U[_nx-2].first), Upp.second = (3.*U[_nx-1].second) - (2.*U[_nx-2].second);
+
+
 
     for (int i=0; i<_nx+1; i++) {
         if (i==0) {
-            U_gauche.first = (3.*U[1].first - U[0].first)/2., U_gauche.second = (3.*U[1].second - U[0].second/2.);
-            U_droite.first = (3.*U[1].first - U[0].first)/2., U_droite.second = (3.*U[1].second - U[0].second/2.);
+            U_gauche.first = (3.*U[0].first - U[1].first)/2., U_gauche.second = (3.*U[0].second - U[1].second)/2.;
+            U_droite.first = (Um.first + U[0].first)/2., U_droite.second = (Um.second + U[0].second)/2.;
             F[0] = this->Flux(U[0], U[0]);
         }
         else if (i==_nx) {
-            U_gauche.first = (3.*U[_nx-1].first - U[_nx-2].first)/2., U_gauche.second = (3.*U[_nx-1].second - U[_nx-2].second)/2.;
-            U_droite.first = (3.*U[_nx-1].first - U[_nx-2].first)/2., U_droite.second = (3.*U[_nx-1].second - U[_nx-2].second)/2.;
+            U_gauche.first = (3.*Up.first - Upp.first)/2., U_gauche.second = (3.*Up.second - Upp.second)/2.;
+            U_droite.first = (U[_nx-1].first + Up.first)/2., U_droite.second = (U[_nx-1].second + Up.second)/2.;
             F[_nx] = this->Flux(U[_nx-1], U[_nx-1]);
         }
         else if (i==_nx-1) {
-            U_gauche.first = (U[_nx-1].first + U[_nx-2].first)/2., U_gauche.second = (U[_nx-1].second + U[_nx-2].second)/2.;
-            U_droite.first = (U[_nx-1].first + U[_nx-2].first)/2., U_droite.second = (U[_nx-1].second + U[_nx-2].second)/2.;
-            F[_nx-1] = this->Flux(U[_nx-2], U[_nx-2]);
+            U_gauche.first = (3.*U[_nx-1].first - Up.first)/2., U_gauche.second = (3.*U[_nx-1].second - Up.second)/2.;
+            U_droite.first = (U[_nx-2].first + U[_nx-1].first)/2., U_droite.second = (U[_nx-2].second + U[_nx-1].second)/2.;
+            F[_nx-1] = this->Flux(U_gauche, U_droite);
         }
         else {
             U_gauche.first = (3.*U[i].first - U[i+1].first)/2., U_gauche.second = (3.*U[i].second - U[i+1].second)/2.;
@@ -210,7 +223,7 @@ pair<double,double> Schema::Fonction_F(pair<double,double> Ui)
 
 vector<pair<double,double>> Schema::Update_U(vector<pair<double,double>> U, vector<pair<double,double>> F, vector<int> Verification_U)
 {
-    vector<pair<double,double>> U_update(_nx);
+    vector<pair<double,double>> U_update(_nx, {0, 0});
 
     for (int i=0; i<_nx; i++) {
         if (Verification_U[i]) {
@@ -245,9 +258,9 @@ vector<pair<double,double>> Schema::Update_UO2(vector<pair<double,double>> U, ve
 void Schema::Update_verification()
 {
     _Verification_U.assign(_nx, 0);
-    _Verification_Flux.assign(_nx, 0);
+    _Verification_Flux.assign(_nx+1, 0);
     _Verification_U_prime.assign(_nx, 0);
-    _Verification_Flux_prime.assign(_nx, 0);
+    _Verification_Flux_prime.assign(_nx+1, 0);
 
     for (int i=0; i<_nx; i++) {
         if (_UO2[i].first<0) {
@@ -273,7 +286,7 @@ void Schema::Update_verification()
 void Schema::Save_Solution()
 {
     char buffer[100];
-    std::snprintf(buffer, sizeof(buffer), "/home/segal/Documents/MatMeca/TER-SHALLOW-WATER-EQUATION/Solutions/valid_1D/valid_1D_%i.dat", _k);
+    std::snprintf(buffer, sizeof(buffer), "Solutions/sol_1D_ordre_2/valid_1D/valid_1D_%i.dat", _k);
     _k++;
 
     // Écriture du fichier

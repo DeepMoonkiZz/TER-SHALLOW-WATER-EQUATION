@@ -1,0 +1,19 @@
+# Définition des plages fixes pour les axes x et y
+set xrange [-1:1]  # Remplacez xmin et xmax par les valeurs appropriées
+set yrange [0:1]  # Remplacez ymin et ymax par les valeurs appropriées
+set zrange [0.5:2.5]
+
+set zlabel ""
+
+# Nombre total de fichiers
+n_files = 83
+
+pause 1 
+# Boucle sur les indices 
+do for [i=0:n_files-1] {
+    file_name = sprintf("valid_2D/valid_2D_%i.dat", i)
+    
+    set title "t = 0.15 s"
+    splot file_name u 1:2:3 title "water height (m)"
+    pause 0.08
+}
